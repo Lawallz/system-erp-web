@@ -1,15 +1,12 @@
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-} from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './contexts/AuthContext'
 import { AppLayout } from './layouts/AppLayout'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
-import { Placeholder } from './pages/Placeholder'
+import { Catalog } from './pages/Catalog'
+import { Operations } from './pages/Operations'
+import { Reports } from './pages/Reports'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
 function App() {
@@ -17,69 +14,57 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route
-            path="/login"
-            element={<Login />}
-          />
+          <Route path="/login" element={<Login />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route
-                index
-                element={<Dashboard />}
-              />
+              <Route index element={<Dashboard />} />
 
               <Route
                 path="products"
-                element={<Placeholder title="Produtos" />}
+                element={<Catalog key="products" module="products" />}
               />
 
               <Route
                 path="categories"
-                element={<Placeholder title="Categorias" />}
+                element={<Catalog key="categories" module="categories" />}
               />
 
               <Route
                 path="stock"
-                element={<Placeholder title="Estoque" />}
+                element={<Operations key="stock" module="stock" />}
               />
 
               <Route
                 path="sales"
-                element={<Placeholder title="Vendas" />}
+                element={<Operations key="sales" module="sales" />}
               />
 
               <Route
                 path="purchases"
-                element={<Placeholder title="Compras" />}
+                element={<Operations key="purchases" module="purchases" />}
               />
 
               <Route
                 path="suppliers"
-                element={<Placeholder title="Fornecedores" />}
+                element={<Catalog key="suppliers" module="suppliers" />}
               />
 
-              <Route
-                path="reports"
-                element={<Placeholder title="Relatórios" />}
-              />
+              <Route path="reports" element={<Reports />} />
 
               <Route
                 path="users"
-                element={<Placeholder title="Usuários" />}
+                element={<Catalog key="users" module="users" />}
               />
 
               <Route
                 path="roles"
-                element={<Placeholder title="Funções e permissões" />}
+                element={<Catalog key="roles" module="roles" />}
               />
             </Route>
           </Route>
 
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
-          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

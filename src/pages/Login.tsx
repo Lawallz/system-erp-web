@@ -1,8 +1,4 @@
-import {
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import {
@@ -19,13 +15,10 @@ import { useAuth } from '../contexts/AuthContext'
 export function Login() {
   const navigate = useNavigate()
 
-  const {
-    login,
-    isAuthenticated,
-  } = useAuth()
+  const { login, isAuthenticated } = useAuth()
 
-  const [email, setEmail] = useState('admin@minierp.com')
-  const [password, setPassword] = useState('123456')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -49,8 +42,7 @@ export function Login() {
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(
-          err.response?.data?.message ??
-            'Não foi possível realizar o login.',
+          err.response?.data?.message ?? 'Não foi possível realizar o login.',
         )
       } else {
         setError('Não foi possível realizar o login.')
@@ -63,29 +55,25 @@ export function Login() {
   return (
     <main className="min-h-screen bg-slate-950 lg:grid lg:grid-cols-2">
       <section className="relative hidden overflow-hidden bg-slate-950 p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-emerald-600/20 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-lime-500/10 blur-3xl" />
 
         <div className="relative">
           <div className="inline-flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500 text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-white">
               <Boxes size={24} />
             </div>
 
             <div>
-              <p className="text-xl font-bold text-white">
-                MiniERP
-              </p>
+              <p className="text-xl font-bold text-white">MiniERP</p>
 
-              <p className="text-xs text-slate-400">
-                Gestão inteligente
-              </p>
+              <p className="text-xs text-slate-400">Gestão inteligente</p>
             </div>
           </div>
         </div>
 
         <div className="relative max-w-xl">
-          <span className="mb-5 inline-flex rounded-full border border-indigo-400/20 bg-indigo-400/10 px-3 py-1 text-xs font-medium text-indigo-300">
+          <span className="mb-5 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">
             Sistema de gestão empresarial
           </span>
 
@@ -94,8 +82,8 @@ export function Login() {
           </h1>
 
           <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
-            Estoque, vendas, compras, fornecedores e indicadores
-            integrados em uma única plataforma.
+            Estoque, vendas, compras, fornecedores e indicadores integrados em
+            uma única plataforma.
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-4">
@@ -120,7 +108,7 @@ export function Login() {
         </div>
 
         <p className="relative text-sm text-slate-600">
-          MiniERP • Projeto Full Stack
+          MiniERP • Gestão que conecta.
         </p>
       </section>
 
@@ -128,20 +116,16 @@ export function Login() {
         <div className="w-full max-w-md">
           <div className="mb-10 lg:hidden">
             <div className="inline-flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white">
                 <Boxes size={24} />
               </div>
 
-              <p className="text-xl font-bold text-slate-900">
-                MiniERP
-              </p>
+              <p className="text-xl font-bold text-slate-900">MiniERP</p>
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-indigo-600">
-              Bem-vindo
-            </p>
+            <p className="text-sm font-semibold text-emerald-600">Bem-vindo</p>
 
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               Entre na sua conta
@@ -152,10 +136,7 @@ export function Login() {
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
               <label
                 htmlFor="email"
@@ -177,7 +158,7 @@ export function Login() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -204,14 +185,17 @@ export function Login() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                   placeholder="••••••••"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
                 {error}
               </div>
             )}
@@ -219,7 +203,7 @@ export function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? 'Entrando...' : 'Entrar'}
 
@@ -242,24 +226,14 @@ type FeatureProps = {
   text: string
 }
 
-function Feature({
-  icon,
-  title,
-  text,
-}: FeatureProps) {
+function Feature({ icon, title, text }: FeatureProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="mb-4 text-indigo-300">
-        {icon}
-      </div>
+      <div className="mb-4 text-emerald-300">{icon}</div>
 
-      <p className="font-medium text-white">
-        {title}
-      </p>
+      <p className="font-medium text-white">{title}</p>
 
-      <p className="mt-1 text-xs text-slate-500">
-        {text}
-      </p>
+      <p className="mt-1 text-xs text-slate-500">{text}</p>
     </div>
   )
 }

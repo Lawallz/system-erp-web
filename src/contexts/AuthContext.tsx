@@ -1,5 +1,6 @@
 import {
   createContext,
+  useEffect,
   useContext,
   useState,
   type ReactNode,
@@ -58,11 +59,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   })
 
+  useEffect(() => {
+    const expired = () => {
+      setToken(null)
+      setUser(null)
+    }
+    window.addEventListener('erp:session-expired', expired)
+    return () => window.removeEventListener('erp:session-expired', expired)
+  }, [])
+
   async function login(credentials: LoginCredentials) {
-    const response = await api.post<LoginResponse>(
-      '/auth/login',
-      credentials,
-    )
+    const response = await api.post<LoginResponse>('/auth/login', credentials)
 
     const { token: newToken, user: loggedUser } = response.data
 
