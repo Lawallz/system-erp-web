@@ -95,10 +95,12 @@ export function DataTable<T>({
   rows,
   columns,
   searchText,
+  showSearch = true,
 }: {
   rows: T[]
   columns: Column<T>[]
   searchText: (row: T) => string
+  showSearch?: boolean
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -112,18 +114,20 @@ export function DataTable<T>({
   return (
     <div className="panel">
       <div className="table-toolbar">
-        <label className="search">
-          <Search size={18} />
-          <input
-            aria-label="Buscar registros"
-            placeholder="Buscar nesta lista…"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setPage(1)
-            }}
-          />
-        </label>
+        {showSearch && (
+          <label className="search">
+            <Search size={18} />
+            <input
+              aria-label="Buscar registros"
+              placeholder="Buscar nesta lista…"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
+            />
+          </label>
+        )}
         <span className="muted">{filtered.length} registros</span>
       </div>
       {filtered.length ? (

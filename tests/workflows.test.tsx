@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { api } from '../src/api/http'
@@ -75,7 +81,9 @@ describe('ERP interface contracts', () => {
   it('creates products with numeric prices and category id', async () => {
     render(<Catalog module="products" />)
     await userEvent.click(screen.getByRole('button', { name: 'Novo cadastro' }))
-    await screen.findByRole('option', { name: 'Periféricos' })
+    await within(screen.getByRole('dialog')).findByRole('option', {
+      name: 'Periféricos',
+    })
     await userEvent.type(screen.getByLabelText('SKU / código'), 'MOU-01')
     await userEvent.type(screen.getByLabelText('Nome'), 'Mouse')
     await userEvent.type(screen.getByLabelText('Preço de venda (R$)'), '99.90')

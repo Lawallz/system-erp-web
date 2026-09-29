@@ -29,6 +29,7 @@ const groups = [
       { label: 'Produtos', to: '/products', icon: Package },
       { label: 'Categorias', to: '/categories', icon: Tags },
       { label: 'Estoque', to: '/stock', icon: PackageOpen },
+      { label: 'Reposição', to: '/inventory', icon: Boxes },
       { label: 'Vendas', to: '/sales', icon: ShoppingCart },
       { label: 'Compras', to: '/purchases', icon: ClipboardList },
       { label: 'Fornecedores', to: '/suppliers', icon: Truck },

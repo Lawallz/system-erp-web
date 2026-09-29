@@ -972,3 +972,56 @@ dialog .notice {
     transition-duration: 0.01ms !important;
   }
 }
+
+.catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  padding: 18px;
+  margin-bottom: 20px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.catalog-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 140px;
+}
+.catalog-filters select {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 12px;
+}
+.inventory-tools {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.inventory-tools .tabs {
+  margin-bottom: 0;
+}
+.inventory-tools .search {
+  background: white;
+}
+@media (max-width: 1100px) {
+  .inventory-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .inventory-tools .search {
+    width: 100%;
+  }
+}

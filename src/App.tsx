@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
 import { Catalog } from './pages/Catalog'
 import { Operations } from './pages/Operations'
+import { Inventory } from './pages/Inventory'
 import { Reports } from './pages/Reports'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
@@ -50,6 +51,7 @@ function App() {
                 element={<Catalog key="suppliers" module="suppliers" />}
               />
 
+              <Route path="inventory" element={<Inventory />} />
               <Route path="reports" element={<Reports />} />
 
               <Route

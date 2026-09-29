@@ -168,7 +168,7 @@ export function Dashboard() {
                 </div>
                 <AlertTriangle size={20} />
               </div>
-              <Link className="attention-card" to="/stock">
+              <Link className="attention-card" to="/inventory">
                 <span className="metric-icon orange">
                   <Package size={22} />
                 </span>
@@ -176,7 +176,7 @@ export function Dashboard() {
                   <strong>
                     {data.summary.lowStockCount} produtos com estoque baixo
                   </strong>
-                  <small>Confira as movimentações e planeje a reposição</small>
+                  <small>Confira o saldo e planeje a reposição</small>
                 </div>
                 <ArrowUpRight size={18} />
               </Link>
