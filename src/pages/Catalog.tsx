@@ -56,7 +56,7 @@ const configs: Record<
     title: 'Produtos',
     description: 'Seu catálogo organizado, do custo ao estoque.',
     singular: 'produto',
-    editable: false,
+    editable: true,
     fields: [
       { key: 'sku', label: 'SKU / código', min: 2 },
       name,
@@ -158,7 +158,31 @@ export function SelectField({
 }
 export function Catalog({ module }: { module: string }) {
   const config = configs[module]!
-  const resource = useResource<RecordRow[]>(`/${module}`)
+  const [status, setStatus] = useState('active')
+  const [category, setCategory] = useState('')
+  const [stock, setStock] = useState('all')
+  const path =
+    module === 'products' && status !== 'active'
+      ? `/products?status=${status}`
+      : `/${module}`
+  const resource = useResource<RecordRow[]>(path)
+  const [statusRecord, setStatusRecord] = useState<RecordRow | null>(null)
+  const categories = [
+    ...new Set(
+      (resource.data || [])
+        .map((row) => row.category?.name)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ].sort()
+  const rows = (resource.data || []).filter(
+    (row) =>
+      module !== 'products' ||
+      ((!category || row.category?.name === category) &&
+        (stock === 'all' ||
+          (stock === 'out'
+            ? Number(row.stockQuantity) === 0
+            : Number(row.stockQuantity) <= Number(row.minStockAlert)))),
+  )
   const [editing, setEditing] = useState<RecordRow | 'new' | null>(null)
   const [permissions, setPermissions] = useState<RecordRow | null>(null)
   const [notice, setNotice] = useState('')
@@ -178,6 +202,26 @@ export function Catalog({ module }: { module: string }) {
       { label: 'Categoria', render: (row) => row.category?.name || '—' },
       { label: 'Preço', render: (row) => money(row.price) },
       {
+        label: 'Margem bruta',
+        render: (row) => {
+          const margin =
+            Number(row.price) > 0
+              ? ((Number(row.price) - Number(row.costPrice)) /
+                  Number(row.price)) *
+                100
+              : null
+          return (
+            <span
+              className={`badge ${margin !== null && margin <= 0 ? 'warning' : ''}`}
+            >
+              {margin === null
+                ? '—'
+                : `${margin.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`}
+            </span>
+          )
+        },
+      },
+      {
         label: 'Estoque',
         render: (row) => (
           <span
@@ -195,7 +239,7 @@ export function Catalog({ module }: { module: string }) {
     )
   if (module === 'users')
     columns.push({ label: 'Função', render: (row) => row.role?.name || '—' })
-  if (module === 'suppliers' || module === 'users')
+  if (module === 'suppliers' || module === 'users' || module === 'products')
     columns.push({
       label: 'Status',
       render: (row) => (
@@ -213,6 +257,11 @@ export function Catalog({ module }: { module: string }) {
             <Pencil size={14} />
             Editar
           </button>
+          {['products', 'users', 'suppliers'].includes(module) && (
+            <button className="btn small" onClick={() => setStatusRecord(row)}>
+              {row.isActive === false ? 'Reativar' : 'Desativar'}
+            </button>
+          )}
           {module === 'roles' && (
             <button className="btn small" onClick={() => setPermissions(row)}>
               Permissões
@@ -247,10 +296,62 @@ export function Catalog({ module }: { module: string }) {
           {notice}
         </div>
       )}
+      {module === 'products' && (
+        <div className="catalog-filters">
+          <label>
+            Status
+            <select
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value)
+                setCategory('')
+              }}
+            >
+              <option value="active">Ativos</option>
+              <option value="inactive">Inativos</option>
+              <option value="all">Todos</option>
+            </select>
+          </label>
+          <label>
+            Filtrar por categoria
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
+              <option value="">Todas as categorias</option>
+              {categories.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Saldo
+            <select
+              value={stock}
+              onChange={(event) => setStock(event.target.value)}
+            >
+              <option value="all">Todos os saldos</option>
+              <option value="low">No mínimo ou abaixo</option>
+              <option value="out">Sem estoque</option>
+            </select>
+          </label>
+          <button
+            className="btn"
+            onClick={() => {
+              setStatus('active')
+              setCategory('')
+              setStock('all')
+            }}
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
       <Feedback {...resource} retry={resource.reload} />
       {!resource.loading && !resource.error && (
         <DataTable
-          rows={resource.data || []}
+          key={`${module}:${status}:${category}:${stock}`}
+          rows={rows}
           columns={columns}
           searchText={(row) =>
             [
@@ -266,7 +367,8 @@ export function Catalog({ module }: { module: string }) {
       {module === 'products' && (
         <p className="footnote">
           As quantidades são atualizadas pelas movimentações de estoque e pelas
-          operações de compra e venda.
+          operações de compra e venda. A margem bruta usa o custo e preço
+          atuais, sem impostos ou despesas.
         </p>
       )}
       {editing && (
@@ -277,6 +379,18 @@ export function Catalog({ module }: { module: string }) {
           saved={() => {
             setEditing(null)
             setNotice('Cadastro salvo com sucesso.')
+            resource.reload()
+          }}
+        />
+      )}
+      {statusRecord && (
+        <StatusEditor
+          module={module}
+          record={statusRecord}
+          close={() => setStatusRecord(null)}
+          saved={() => {
+            setStatusRecord(null)
+            setNotice('Status atualizado com sucesso.')
             resource.reload()
           }}
         />
@@ -330,7 +444,14 @@ function Editor({
     setError('')
     const payload = Object.fromEntries(
       fields
-        .filter((field) => !field.optional || values[field.key] !== '')
+        .filter(
+          (field) =>
+            !field.optional ||
+            values[field.key] !== '' ||
+            (module === 'products' &&
+              record !== 'new' &&
+              field.key === 'description'),
+        )
         .map((field) => [
           field.key,
           field.type === 'number'
@@ -498,6 +619,77 @@ function PermissionsEditor({
         >
           Salvar permissões
         </button>
+      </div>
+    </Modal>
+  )
+}
+
+function StatusEditor({
+  module,
+  record,
+  close,
+  saved,
+}: {
+  module: string
+  record: RecordRow
+  close: () => void
+  saved: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const activate = record.isActive === false
+  async function confirm() {
+    setBusy(true)
+    setError('')
+    try {
+      await api.patch(
+        `/${module}/${record.id}/${activate ? 'activate' : 'deactivate'}`,
+      )
+      saved()
+    } catch (error) {
+      setError(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Modal
+      title={`${activate ? 'Reativar' : 'Desativar'} ${record.name}`}
+      close={close}
+      busy={busy}
+    >
+      <div className="detail-body">
+        <p>
+          {activate
+            ? 'O cadastro voltará a estar disponível para uso.'
+            : module === 'users'
+              ? 'Este usuário perderá o acesso ao sistema. O histórico será preservado.'
+              : 'O cadastro deixará de aparecer nas opções de novas operações. O histórico será preservado.'}
+        </p>
+        {module === 'products' && !activate && (
+          <p className="footnote">
+            O saldo atual de {record.stockQuantity} unidades será mantido.
+            Compras pendentes deste produto podem exigir reativação antes do
+            recebimento.
+          </p>
+        )}
+        {error && (
+          <div className="notice error" role="alert">
+            {error}
+          </div>
+        )}
+        <div className="dialog-actions">
+          <button className="btn" disabled={busy} onClick={close}>
+            Cancelar
+          </button>
+          <button className="btn primary" disabled={busy} onClick={confirm}>
+            {busy
+              ? 'Atualizando…'
+              : activate
+                ? 'Confirmar reativação'
+                : 'Confirmar desativação'}
+          </button>
+        </div>
       </div>
     </Modal>
   )

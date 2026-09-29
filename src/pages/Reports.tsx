@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { useResource } from '../hooks/useResource'
 import { DataTable, Feedback, PageTitle, type Column } from '../components/UI'
+import { csvCell } from '../api/csv'
 import { money } from '../api/data'
 import type { RecordRow } from './Catalog'
 type Report = {
@@ -27,10 +28,6 @@ const tabs = [
   { id: 'products', label: 'Produtos' },
   { id: 'abc', label: 'Curva ABC' },
 ]
-function csvCell(value: unknown) {
-  const text = String(value ?? '')
-  return `"${(/^[=+\-@\t\r]/.test(text) ? "'" : '') + text.replaceAll('"', '""')}"`
-}
 export function Reports() {
   const [tab, setTab] = useState('sales')
   const resource = useResource<Report>(`/reports/${tab}`)
