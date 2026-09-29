@@ -21,4 +21,6 @@ export const money = (value: unknown) =>
     Number(value || 0),
   )
 export const date = (value: unknown) =>
-  value ? new Date(String(value)).toLocaleString('pt-BR') : '—'
+  value
+    ? new Date(String(value)).toLocaleString('pt-BR', { timeZone: 'Etc/GMT+3' })
+    : '—'

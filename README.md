@@ -15,17 +15,17 @@ Para outro servidor, copie `.env.example` para `.env.local` e defina `VITE_API_U
 
 ## Atualizar uma instalação existente
 
-Atualize primeiro o backend para a branch `feat/catalog-inventory`. Depois, nesta pasta:
+Atualize primeiro o backend para a branch `feat/sales-workspace`. Depois, nesta pasta:
 
 ```bash
 git fetch origin
-git switch feat/catalog-inventory
-git pull --ff-only origin feat/catalog-inventory
+git switch feat/sales-workspace
+git pull --ff-only origin feat/sales-workspace
 npm ci
 npm run dev
 ```
 
-Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas funcionalidades. Nenhum reset, seed ou migration é necessário. Mantenha seu `.env` atual e o PostgreSQL existente. Use Node.js 24 para a suíte atual.
+Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas funcionalidades. Aplique primeiro a migration de código de barras no backend com `npx prisma migrate deploy`. Não rode reset ou seed. Mantenha seu `.env` atual e o PostgreSQL existente. Use Node.js 24 para a suíte atual.
 
 ## Funcionalidades
 
@@ -39,7 +39,10 @@ Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas fun
 - Vendas: múltiplos produtos, total estimado, confirmação e detalhes. O backend determina os preços finais e baixa o estoque.
 - Compras: criação de pedido pendente, adição de itens e confirmação de recebimento com entrada no estoque.
 - Relatórios: vendas, estoque, produtos sem movimentação e curva ABC; exportação da tabela exibida em CSV com proteção contra fórmulas.
-- Busca e paginação locais (10 registros por página), estados vazios, falhas recuperáveis e tratamento de 401/403.
+- Busca, datas de cadastro e paginação no servidor (10, 20 ou 50 por página) em produtos, categorias, fornecedores, usuários, funções, vendas, compras e movimentações. Filtros e datas de exibição usam UTC−03. Indicadores, relatórios e plano de reposição mantêm seus contratos agregados e filtros locais.
+- Venda rápida em `/sales/new`: busca por nome/SKU/código de barras, scanner USB que envia Enter, carrinho com controle de saldo e confirmação; F2 busca e F4 revisa. A busca exata preserva zeros à esquerda e informa códigos ambíguos.
+- Código de barras opcional e único no cadastro de produtos; detalhes do produto com abas de movimentações, compras e vendas, filtros e paginação independentes.
+- Menus, atalhos, rotas e ações conforme permissões retornadas por `/auth/me`. Permissões são revalidadas ao focar a janela, após alterações de cadastros e respostas 403.
 
 ## Validação
 
@@ -53,11 +56,13 @@ Os testes de componentes usam respostas simuladas compatíveis com os contratos 
 
 ## Limites conhecidos
 
-- Esta versão exige a branch `feat/catalog-inventory` do backend para edição/status de produtos e relatório de reposição.
+- Esta versão exige a branch `feat/sales-workspace` do backend para edição/status de produtos e relatório de reposição.
 - Exclusão definitiva e redefinição de senha não foram incluídas.
 - O plano de reposição não prevê demanda futura nem cria compras automaticamente. O custo estimado exclui frete e impostos.
 - O backend exige pelo menos uma permissão por função ao atualizar permissões.
-- A autorização final permanece no backend. O login atual não retorna a lista de permissões individuais; tentativas sem acesso recebem mensagem de permissão insuficiente.
-- Listagens e indicadores abrangem todo o período. Filtros de data e paginação no servidor ainda não estão disponíveis.
+- A autorização final permanece no backend. Operadores com apenas `sales:create` usam o catálogo de venda sem obter custos ou acesso administrativo. Históricos do produto exigem `products:read` e a permissão de leitura do módulo correspondente.
+- O carrinho existe apenas na tela atual e não processa pagamentos. Não há leitura por câmera. Em falhas de conexão após confirmar, confira o histórico antes de repetir: a API ainda não oferece chave de idempotência.
+- Os seletores de formulários e relatórios agregados preservam endpoints legados sem paginação; grandes volumes nesses fluxos ainda precisam de evolução específica.
+- Formulários de compra/estoque e usuários precisam também das permissões de leitura dos cadastros usados em seus seletores.
 - A confirmação de compras segue o fluxo da API: criar pedido, adicionar itens, receber. Um pedido permanece pendente até o recebimento.
 - Validação visual em navegador real e integração com PostgreSQL real ainda precisam ser realizadas. A instalação do navegador de testes foi bloqueada por erro de certificado no ambiente desta atualização.

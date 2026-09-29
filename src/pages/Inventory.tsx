@@ -1,3 +1,4 @@
+import { usePermissions } from '../hooks/usePermissions'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -44,6 +45,7 @@ type InventoryReport = {
   products: InventoryRow[]
 }
 export function Inventory() {
+  const can = usePermissions()
   const resource = useResource<InventoryReport>('/reports/inventory')
   const [filter, setFilter] = useState('reorder')
   const [query, setQuery] = useState('')
@@ -163,9 +165,11 @@ export function Inventory() {
               </h2>
               <p>Compras pendentes já são descontadas da sugestão.</p>
             </div>
-            <Link className="btn light" to="/purchases">
-              Abrir compras <ArrowUpRight size={17} />
-            </Link>
+            {can('purchases:read') && (
+              <Link className="btn light" to="/purchases">
+                Abrir compras <ArrowUpRight size={17} />
+              </Link>
+            )}
           </div>
           <div className="metrics">
             {[
@@ -249,9 +253,11 @@ export function Inventory() {
                 Confira os outros filtros ou ajuste os estoques mínimos no
                 catálogo.
               </p>
-              <Link className="text-link" to="/products">
-                Abrir produtos <ArrowUpRight size={15} />
-              </Link>
+              {can('products:read') && (
+                <Link className="text-link" to="/products">
+                  Abrir produtos <ArrowUpRight size={15} />
+                </Link>
+              )}
             </div>
           )}
           <p className="footnote">

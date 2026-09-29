@@ -1,19 +1,18 @@
+import { Link } from 'react-router-dom'
+import { usePermissions } from '../hooks/usePermissions'
+import { usePagedResource } from '../hooks/usePagedResource'
+import { ListFilters, PagedTable } from '../components/PagedTable'
 import { useState, type FormEvent } from 'react'
 import { Plus, Pencil, RefreshCw } from 'lucide-react'
 import { api } from '../api/http'
 import { errorMessage, money } from '../api/data'
 import { useResource } from '../hooks/useResource'
-import {
-  DataTable,
-  Feedback,
-  Modal,
-  PageTitle,
-  type Column,
-} from '../components/UI'
+import { Feedback, Modal, PageTitle, type Column } from '../components/UI'
 export type RecordRow = {
   id: string
   name: string
   description?: string
+  barcode?: string | null
   sku?: string
   price?: string
   costPrice?: string
@@ -59,6 +58,7 @@ const configs: Record<
     editable: true,
     fields: [
       { key: 'sku', label: 'SKU / código', min: 2 },
+      { key: 'barcode', label: 'Código de barras', optional: true },
       name,
       description,
       { key: 'price', label: 'Preço de venda (R$)', type: 'number', min: 0.01 },
@@ -158,31 +158,23 @@ export function SelectField({
 }
 export function Catalog({ module }: { module: string }) {
   const config = configs[module]!
+  const can = usePermissions()
+  const permissionGroup =
+    module === 'categories' ? 'products' : module === 'roles' ? 'users' : module
   const [status, setStatus] = useState('active')
   const [category, setCategory] = useState('')
   const [stock, setStock] = useState('all')
-  const path =
-    module === 'products' && status !== 'active'
-      ? `/products?status=${status}`
-      : `/${module}`
-  const resource = useResource<RecordRow[]>(path)
-  const [statusRecord, setStatusRecord] = useState<RecordRow | null>(null)
-  const categories = [
-    ...new Set(
-      (resource.data || [])
-        .map((row) => row.category?.name)
-        .filter((name): name is string => Boolean(name)),
-    ),
-  ].sort()
-  const rows = (resource.data || []).filter(
-    (row) =>
-      module !== 'products' ||
-      ((!category || row.category?.name === category) &&
-        (stock === 'all' ||
-          (stock === 'out'
-            ? Number(row.stockQuantity) === 0
-            : Number(row.stockQuantity) <= Number(row.minStockAlert)))),
+  const resource = usePagedResource<RecordRow>(
+    `/${module}`,
+    module === 'products'
+      ? { status, stock, ...(category ? { categoryId: category } : {}) }
+      : {},
   )
+  const categoryResource = useResource<RecordRow[]>(
+    module === 'products' ? '/products/categories' : null,
+  )
+  const categories = categoryResource.data || []
+  const [statusRecord, setStatusRecord] = useState<RecordRow | null>(null)
   const [editing, setEditing] = useState<RecordRow | 'new' | null>(null)
   const [permissions, setPermissions] = useState<RecordRow | null>(null)
   const [notice, setNotice] = useState('')
@@ -191,7 +183,13 @@ export function Catalog({ module }: { module: string }) {
       label: 'Nome',
       render: (row) => (
         <div className="cell-name">
-          {row.name}
+          {module === 'products' ? (
+            <Link className="text-link" to={`/products/${row.id}`}>
+              {row.name}
+            </Link>
+          ) : (
+            row.name
+          )}
           <small>{row.sku || row.description || row.email}</small>
         </div>
       ),
@@ -253,16 +251,24 @@ export function Catalog({ module }: { module: string }) {
       label: 'Ações',
       render: (row) => (
         <div className="row-actions">
-          <button className="btn small" onClick={() => setEditing(row)}>
-            <Pencil size={14} />
-            Editar
-          </button>
-          {['products', 'users', 'suppliers'].includes(module) && (
-            <button className="btn small" onClick={() => setStatusRecord(row)}>
-              {row.isActive === false ? 'Reativar' : 'Desativar'}
+          {can(`${permissionGroup}:update`) && (
+            <button className="btn small" onClick={() => setEditing(row)}>
+              <Pencil size={14} />
+              Editar
             </button>
           )}
-          {module === 'roles' && (
+          {['products', 'users', 'suppliers'].includes(module) &&
+            can(
+              `${permissionGroup}:${row.isActive === false || module === 'suppliers' ? 'update' : 'delete'}`,
+            ) && (
+              <button
+                className="btn small"
+                onClick={() => setStatusRecord(row)}
+              >
+                {row.isActive === false ? 'Reativar' : 'Desativar'}
+              </button>
+            )}
+          {module === 'roles' && can('users:update') && (
             <button className="btn small" onClick={() => setPermissions(row)}>
               Permissões
             </button>
@@ -284,10 +290,12 @@ export function Catalog({ module }: { module: string }) {
             >
               <RefreshCw size={18} />
             </button>
-            <button className="btn primary" onClick={() => setEditing('new')}>
-              <Plus size={17} />
-              Novo cadastro
-            </button>
+            {can(`${permissionGroup}:create`) && (
+              <button className="btn primary" onClick={() => setEditing('new')}>
+                <Plus size={17} />
+                Novo cadastro
+              </button>
+            )}
           </div>
         }
       />
@@ -319,8 +327,10 @@ export function Catalog({ module }: { module: string }) {
               onChange={(event) => setCategory(event.target.value)}
             >
               <option value="">Todas as categorias</option>
-              {categories.map((name) => (
-                <option key={name}>{name}</option>
+              {categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
               ))}
             </select>
           </label>
@@ -347,23 +357,9 @@ export function Catalog({ module }: { module: string }) {
           </button>
         </div>
       )}
-      <Feedback {...resource} retry={resource.reload} />
-      {!resource.loading && !resource.error && (
-        <DataTable
-          key={`${module}:${status}:${category}:${stock}`}
-          rows={rows}
-          columns={columns}
-          searchText={(row) =>
-            [
-              row.name,
-              row.sku,
-              row.email,
-              row.document,
-              row.category?.name,
-            ].join(' ')
-          }
-        />
-      )}
+      <ListFilters resource={resource} />
+      <p className="footnote">Período de cadastro · datas em UTC−03.</p>
+      <PagedTable resource={resource} columns={columns} />
       {module === 'products' && (
         <p className="footnote">
           As quantidades são atualizadas pelas movimentações de estoque e pelas
@@ -371,31 +367,37 @@ export function Catalog({ module }: { module: string }) {
           atuais, sem impostos ou despesas.
         </p>
       )}
-      {editing && (
-        <Editor
-          module={module}
-          record={editing}
-          close={() => setEditing(null)}
-          saved={() => {
-            setEditing(null)
-            setNotice('Cadastro salvo com sucesso.')
-            resource.reload()
-          }}
-        />
-      )}
-      {statusRecord && (
-        <StatusEditor
-          module={module}
-          record={statusRecord}
-          close={() => setStatusRecord(null)}
-          saved={() => {
-            setStatusRecord(null)
-            setNotice('Status atualizado com sucesso.')
-            resource.reload()
-          }}
-        />
-      )}
-      {permissions && (
+      {editing &&
+        can(
+          `${permissionGroup}:${editing === 'new' ? 'create' : 'update'}`,
+        ) && (
+          <Editor
+            module={module}
+            record={editing}
+            close={() => setEditing(null)}
+            saved={() => {
+              setEditing(null)
+              setNotice('Cadastro salvo com sucesso.')
+              resource.reload()
+            }}
+          />
+        )}
+      {statusRecord &&
+        can(
+          `${permissionGroup}:${statusRecord.isActive === false || module === 'suppliers' ? 'update' : 'delete'}`,
+        ) && (
+          <StatusEditor
+            module={module}
+            record={statusRecord}
+            close={() => setStatusRecord(null)}
+            saved={() => {
+              setStatusRecord(null)
+              setNotice('Status atualizado com sucesso.')
+              resource.reload()
+            }}
+          />
+        )}
+      {permissions && can('users:update') && (
         <PermissionsEditor
           record={permissions}
           close={() => setPermissions(null)}
@@ -450,7 +452,7 @@ function Editor({
             values[field.key] !== '' ||
             (module === 'products' &&
               record !== 'new' &&
-              field.key === 'description'),
+              (field.key === 'description' || field.key === 'barcode')),
         )
         .map((field) => [
           field.key,
@@ -462,6 +464,7 @@ function Editor({
     try {
       if (record === 'new') await api.post(`/${module}`, payload)
       else await api.put(`/${module}/${record.id}`, payload)
+      window.dispatchEvent(new Event('erp:permissions-changed'))
       saved()
     } catch (error) {
       setError(errorMessage(error))
@@ -554,6 +557,7 @@ function PermissionsEditor({
     setError('')
     try {
       await api.put(`/roles/${record.id}/permissions`, { permissionIds: ids })
+      window.dispatchEvent(new Event('erp:permissions-changed'))
       saved()
     } catch (error) {
       setError(errorMessage(error))
@@ -645,6 +649,7 @@ function StatusEditor({
       await api.patch(
         `/${module}/${record.id}/${activate ? 'activate' : 'deactivate'}`,
       )
+      window.dispatchEvent(new Event('erp:permissions-changed'))
       saved()
     } catch (error) {
       setError(errorMessage(error))

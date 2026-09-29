@@ -17,35 +17,100 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { useAuth } from '../hooks/useAuth'
 const groups = [
   {
     label: 'VISÃO GERAL',
-    items: [{ label: 'Dashboard', to: '/', icon: LayoutDashboard }],
+    items: [
+      {
+        label: 'Dashboard',
+        to: '/',
+        permission: 'reports:read',
+        icon: LayoutDashboard,
+      },
+    ],
   },
   {
     label: 'OPERAÇÃO',
     items: [
-      { label: 'Produtos', to: '/products', icon: Package },
-      { label: 'Categorias', to: '/categories', icon: Tags },
-      { label: 'Estoque', to: '/stock', icon: PackageOpen },
-      { label: 'Reposição', to: '/inventory', icon: Boxes },
-      { label: 'Vendas', to: '/sales', icon: ShoppingCart },
-      { label: 'Compras', to: '/purchases', icon: ClipboardList },
-      { label: 'Fornecedores', to: '/suppliers', icon: Truck },
+      {
+        label: 'Produtos',
+        to: '/products',
+        permission: 'products:read',
+        icon: Package,
+      },
+      {
+        label: 'Categorias',
+        to: '/categories',
+        permission: 'products:read',
+        icon: Tags,
+      },
+      {
+        label: 'Estoque',
+        to: '/stock',
+        permission: 'stock:read',
+        icon: PackageOpen,
+      },
+      {
+        label: 'Reposição',
+        to: '/inventory',
+        permission: 'reports:read',
+        icon: Boxes,
+      },
+      {
+        label: 'Venda rápida',
+        to: '/sales/new',
+        permission: 'sales:create',
+        icon: ShoppingCart,
+      },
+      {
+        label: 'Vendas',
+        to: '/sales',
+        permission: 'sales:read',
+        icon: ShoppingCart,
+      },
+      {
+        label: 'Compras',
+        to: '/purchases',
+        permission: 'purchases:read',
+        icon: ClipboardList,
+      },
+      {
+        label: 'Fornecedores',
+        to: '/suppliers',
+        permission: 'suppliers:read',
+        icon: Truck,
+      },
     ],
   },
   {
     label: 'ADMINISTRAÇÃO',
     items: [
-      { label: 'Relatórios', to: '/reports', icon: ChartNoAxesCombined },
-      { label: 'Usuários', to: '/users', icon: Users },
-      { label: 'Funções e permissões', to: '/roles', icon: UserCog },
+      {
+        label: 'Relatórios',
+        to: '/reports',
+        permission: 'reports:read',
+        icon: ChartNoAxesCombined,
+      },
+      {
+        label: 'Usuários',
+        to: '/users',
+        permission: 'users:read',
+        icon: Users,
+      },
+      {
+        label: 'Funções e permissões',
+        to: '/roles',
+        permission: 'users:read',
+        icon: UserCog,
+      },
     ],
   },
 ]
 export function AppLayout() {
   const { user, logout } = useAuth()
+  const can = usePermissions()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const title =
@@ -76,25 +141,31 @@ export function AppLayout() {
         </div>
         <div id="navigation" className={`navigation ${open ? 'is-open' : ''}`}>
           <nav aria-label="Navegação principal">
-            {groups.map((group) => (
-              <div className="nav-group" key={group.label}>
-                <p>{group.label}</p>
-                {group.items.map(({ label, to, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/'}
-                    onClick={() => setOpen(false)}
-                    className={({ isActive }) =>
-                      isActive ? 'nav-item active' : 'nav-item'
-                    }
-                  >
-                    <Icon size={18} />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            ))}
+            {groups
+              .filter((group) =>
+                group.items.some((item) => can(item.permission)),
+              )
+              .map((group) => (
+                <div className="nav-group" key={group.label}>
+                  <p>{group.label}</p>
+                  {group.items
+                    .filter((item) => can(item.permission))
+                    .map(({ label, to, icon: Icon }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={to === '/' || to === '/sales'}
+                        onClick={() => setOpen(false)}
+                        className={({ isActive }) =>
+                          isActive ? 'nav-item active' : 'nav-item'
+                        }
+                      >
+                        <Icon size={18} />
+                        {label}
+                      </NavLink>
+                    ))}
+                </div>
+              ))}
           </nav>
           <div className="sidebar-bottom">
             <div className="workspace-note">

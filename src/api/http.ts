@@ -25,6 +25,12 @@ api.interceptors.response.use(
       localStorage.removeItem('erp_user')
       window.dispatchEvent(new Event('erp:session-expired'))
     }
+    if (
+      error.response?.status === 403 &&
+      !error.config?.url?.includes('/auth/me')
+    ) {
+      window.dispatchEvent(new Event('erp:permissions-changed'))
+    }
     return Promise.reject(error)
   },
 )
