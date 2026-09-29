@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+  timeout: 15000,
 })
 
 api.interceptors.request.use((config) => {
@@ -13,3 +14,17 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/auth/login')
+    ) {
+      localStorage.removeItem('erp_token')
+      localStorage.removeItem('erp_user')
+      window.dispatchEvent(new Event('erp:session-expired'))
+    }
+    return Promise.reject(error)
+  },
+)
