@@ -1,16 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { usePermissions } from '../hooks/usePermissions'
+import { usePagedResource } from '../hooks/usePagedResource'
+import { ListFilters, PagedTable } from '../components/PagedTable'
 import { api } from '../api/http'
 import { date, errorMessage, money } from '../api/data'
 import { useResource } from '../hooks/useResource'
-import {
-  DataTable,
-  Feedback,
-  Modal,
-  PageTitle,
-  type Column,
-} from '../components/UI'
-import { SelectField, type RecordRow } from './Catalog'
+import { Feedback, Modal, PageTitle, type Column } from '../components/UI'
+import { SelectField } from './Catalog'
 type Item = {
   id: string
   product: { name: string }
@@ -44,7 +42,8 @@ export function Operations({
   module: 'sales' | 'purchases' | 'stock'
 }) {
   const path = module === 'stock' ? '/stock/movements' : `/${module}`
-  const resource = useResource<Operation[]>(path)
+  const resource = usePagedResource<Operation>(path)
+  const can = usePermissions()
   const [mode, setMode] = useState<'create' | Operation | null>(null)
   const [notice, setNotice] = useState('')
   const title = { sales: 'Vendas', purchases: 'Compras', stock: 'Estoque' }[
@@ -120,14 +119,18 @@ export function Operations({
           }[module]
         }
         action={
-          <button className="btn primary" onClick={() => setMode('create')}>
-            <Plus size={17} />
-            {module === 'stock'
-              ? 'Nova movimentação'
-              : module === 'sales'
-                ? 'Nova venda'
-                : 'Nova compra'}
-          </button>
+          can(`${module}:create`) &&
+          (module === 'sales' ? (
+            <Link className="btn primary" to="/sales/new">
+              <Plus size={17} />
+              Nova venda
+            </Link>
+          ) : (
+            <button className="btn primary" onClick={() => setMode('create')}>
+              <Plus size={17} />
+              {module === 'stock' ? 'Nova movimentação' : 'Nova compra'}
+            </button>
+          ))
         }
       />
       {notice && (
@@ -135,23 +138,10 @@ export function Operations({
           {notice}
         </div>
       )}
-      <Feedback {...resource} retry={resource.reload} />
-      {!resource.loading && !resource.error && (
-        <DataTable
-          rows={resource.data || []}
-          columns={columns}
-          searchText={(row) =>
-            [
-              row.id,
-              row.supplier?.name,
-              row.product?.name,
-              row.user?.name,
-              movementNames[row.type || ''],
-            ].join(' ')
-          }
-        />
-      )}
-      {mode === 'create' && (
+      <ListFilters resource={resource} />
+      <p className="footnote">Datas de criação em UTC−03.</p>
+      <PagedTable resource={resource} columns={columns} />
+      {mode === 'create' && module !== 'sales' && can(`${module}:create`) && (
         <OperationForm
           module={module}
           close={() => setMode(null)}
@@ -187,31 +177,18 @@ function OperationForm({
   const [quantity, setQuantity] = useState(1)
   const [type, setType] = useState('ADJUSTMENT_IN')
   const [reason, setReason] = useState('')
-  const [items, setItems] = useState<{ productId: string; quantity: number }[]>(
-    [{ productId: '', quantity: 1 }],
-  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
     setError('')
-    if (
-      module === 'sales' &&
-      new Set(items.map((item) => item.productId)).size !== items.length
-    ) {
-      setError('Use uma única linha por produto e ajuste sua quantidade.')
-      setBusy(false)
-      return
-    }
     try {
       await api.post(
         module === 'stock' ? '/stock/movements' : `/${module}`,
-        module === 'sales'
-          ? { items }
-          : module === 'purchases'
-            ? { supplierId }
-            : { productId, quantity, type, reason },
+        module === 'purchases'
+          ? { supplierId }
+          : { productId, quantity, type, reason },
       )
       saved()
     } catch (error) {
@@ -222,13 +199,7 @@ function OperationForm({
   }
   return (
     <Modal
-      title={
-        module === 'sales'
-          ? 'Nova venda'
-          : module === 'purchases'
-            ? 'Nova compra'
-            : 'Nova movimentação'
-      }
+      title={module === 'purchases' ? 'Nova compra' : 'Nova movimentação'}
       close={close}
       busy={busy}
     >
@@ -253,7 +224,7 @@ function OperationForm({
                 adicionar produtos e confirmar o recebimento.
               </p>
             </>
-          ) : module === 'stock' ? (
+          ) : (
             <>
               <label>
                 Produto
@@ -301,14 +272,6 @@ function OperationForm({
                 />
               </label>
             </>
-          ) : (
-            <div className="full-width">
-              <SaleItems items={items} change={setItems} />
-              <p className="footnote">
-                A confirmação registra a venda e baixa o estoque. Os preços são
-                calculados pelo servidor.
-              </p>
-            </div>
           )}
         </div>
         {error && (
@@ -321,108 +284,11 @@ function OperationForm({
             Cancelar
           </button>
           <button className="btn primary" disabled={busy}>
-            {busy
-              ? 'Registrando…'
-              : module === 'sales'
-                ? 'Confirmar venda'
-                : 'Registrar'}
+            {busy ? 'Registrando…' : 'Registrar'}
           </button>
         </div>
       </form>
     </Modal>
-  )
-}
-function SaleItems({
-  items,
-  change,
-}: {
-  items: { productId: string; quantity: number }[]
-  change: (items: { productId: string; quantity: number }[]) => void
-}) {
-  const products = useResource<RecordRow[]>('/products')
-  const total = items.reduce(
-    (sum, item) =>
-      sum +
-      Number(
-        products.data?.find((product) => product.id === item.productId)
-          ?.price || 0,
-      ) *
-        item.quantity,
-    0,
-  )
-  return (
-    <>
-      <Feedback {...products} retry={products.reload} />
-      {items.map((item, index) => (
-        <div className="sale-line" key={index}>
-          <label>
-            Produto
-            <select
-              required
-              value={item.productId}
-              onChange={(event) =>
-                change(
-                  items.map((row, i) =>
-                    i === index
-                      ? { ...row, productId: event.target.value }
-                      : row,
-                  ),
-                )
-              }
-            >
-              <option value="">Selecione</option>
-              {products.data
-                ?.filter((product) => product.isActive !== false)
-                .map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} · {money(product.price)} ·{' '}
-                    {product.stockQuantity} un.
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label>
-            Quantidade
-            <input
-              required
-              type="number"
-              min="1"
-              step="1"
-              value={item.quantity}
-              onChange={(event) =>
-                change(
-                  items.map((row, i) =>
-                    i === index
-                      ? { ...row, quantity: Number(event.target.value) }
-                      : row,
-                  ),
-                )
-              }
-            />
-          </label>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={`Remover item ${index + 1}`}
-            disabled={items.length === 1}
-            onClick={() => change(items.filter((_, i) => i !== index))}
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        className="btn"
-        onClick={() => change([...items, { productId: '', quantity: 1 }])}
-      >
-        <Plus size={16} />
-        Adicionar produto
-      </button>
-      <div className="sale-total">
-        Total estimado<strong>{money(total)}</strong>
-      </div>
-    </>
   )
 }
 function Details({
@@ -436,6 +302,7 @@ function Details({
   close: () => void
   changed: () => void
 }) {
+  const can = usePermissions()
   const resource = useResource<Operation>(
     module === 'purchases' ? `/purchases/${record.id}` : null,
   )
@@ -516,79 +383,83 @@ function Details({
           </div>
           {module === 'purchases' && data.status === 'PENDING' && (
             <>
-              <form onSubmit={add}>
-                <h3>Adicionar item</h3>
-                <div className="form-grid">
-                  <label>
-                    Produto
-                    <SelectField
-                      field={{
-                        key: 'productId',
-                        label: 'Produto',
-                        source: '/products',
-                      }}
-                      value={productId}
-                      onChange={setProductId}
-                    />
-                  </label>
-                  <label>
-                    Quantidade
-                    <input
-                      required
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={quantity}
-                      onChange={(event) =>
-                        setQuantity(Number(event.target.value))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Custo unitário (R$)
-                    <input
-                      required
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={unitCost}
-                      onChange={(event) => setUnitCost(event.target.value)}
-                    />
-                  </label>
-                </div>
-                <button className="btn" disabled={busy}>
-                  Adicionar ao pedido
-                </button>
-              </form>
-              <div className="dialog-actions">
-                {confirm ? (
-                  <>
-                    <p>Confirmar recebimento e entrada no estoque?</p>
-                    <button
-                      className="btn"
-                      disabled={busy}
-                      onClick={() => setConfirm(false)}
-                    >
-                      Voltar
-                    </button>
+              {can('purchases:create') && (
+                <form onSubmit={add}>
+                  <h3>Adicionar item</h3>
+                  <div className="form-grid">
+                    <label>
+                      Produto
+                      <SelectField
+                        field={{
+                          key: 'productId',
+                          label: 'Produto',
+                          source: '/products',
+                        }}
+                        value={productId}
+                        onChange={setProductId}
+                      />
+                    </label>
+                    <label>
+                      Quantidade
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={quantity}
+                        onChange={(event) =>
+                          setQuantity(Number(event.target.value))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Custo unitário (R$)
+                      <input
+                        required
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={unitCost}
+                        onChange={(event) => setUnitCost(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button className="btn" disabled={busy}>
+                    Adicionar ao pedido
+                  </button>
+                </form>
+              )}
+              {can('purchases:receive') && (
+                <div className="dialog-actions">
+                  {confirm ? (
+                    <>
+                      <p>Confirmar recebimento e entrada no estoque?</p>
+                      <button
+                        className="btn"
+                        disabled={busy}
+                        onClick={() => setConfirm(false)}
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        className="btn primary"
+                        disabled={busy}
+                        onClick={receive}
+                      >
+                        Confirmar recebimento
+                      </button>
+                    </>
+                  ) : (
                     <button
                       className="btn primary"
-                      disabled={busy}
-                      onClick={receive}
+                      disabled={busy || !data.items?.length || resource.loading}
+                      onClick={() => setConfirm(true)}
                     >
-                      Confirmar recebimento
+                      Receber compra
                     </button>
-                  </>
-                ) : (
-                  <button
-                    className="btn primary"
-                    disabled={busy || !data.items?.length || resource.loading}
-                    onClick={() => setConfirm(true)}
-                  >
-                    Receber compra
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

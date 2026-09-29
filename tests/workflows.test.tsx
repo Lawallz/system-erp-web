@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { pagedFixture } from './paged-fixture'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fireEvent,
   render,
@@ -34,6 +35,14 @@ let responses: Record<string, unknown>
 beforeEach(() => {
   calls.length = 0
   responses = {
+    '/auth/me': {
+      data: {
+        id: 'u1',
+        name: 'Pedro',
+        role: 'Admin',
+        permissions: ['products:read'],
+      },
+    },
     '/products': [product],
     '/products/categories': [{ id: 'c1', name: 'Periféricos' }],
     '/categories': { data: [{ id: 'c1', name: 'Periféricos' }] },
@@ -59,7 +68,7 @@ beforeEach(() => {
     const body = config.data ? JSON.parse(config.data) : undefined
     calls.push({ method: config.method!, url: config.url!, data: body })
     return {
-      data: responses[config.url!] ?? { data: [] },
+      data: pagedFixture(config.url!, responses),
       status: 200,
       statusText: 'OK',
       headers: {},
@@ -68,18 +77,26 @@ beforeEach(() => {
   }
 })
 describe('ERP interface contracts', () => {
-  it('shows products from the raw API response and filters locally', async () => {
-    render(<Catalog module="products" />)
+  it('shows products and searches through the paginated API', async () => {
+    render(
+      <MemoryRouter>
+        <Catalog module="products" />
+      </MemoryRouter>,
+    )
     await screen.findByText('Teclado')
     expect(screen.getByText('R$ 150,00')).toBeTruthy()
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'Buscar registros' }),
+      screen.getByRole('searchbox', { name: 'Buscar registros' }),
       'inexistente',
     )
-    expect(screen.getByText('Nenhum resultado encontrado')).toBeTruthy()
+    expect(await screen.findByText('Nenhum registro encontrado')).toBeTruthy()
   })
   it('creates products with numeric prices and category id', async () => {
-    render(<Catalog module="products" />)
+    render(
+      <MemoryRouter>
+        <Catalog module="products" />
+      </MemoryRouter>,
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Novo cadastro' }))
     await within(screen.getByRole('dialog')).findByRole('option', {
       name: 'Periféricos',
@@ -103,7 +120,11 @@ describe('ERP interface contracts', () => {
     })
   })
   it('edits categories using PUT and the wrapped response', async () => {
-    render(<Catalog module="categories" />)
+    render(
+      <MemoryRouter>
+        <Catalog module="categories" />
+      </MemoryRouter>,
+    )
     await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
     await userEvent.clear(screen.getByLabelText('Nome'))
     await userEvent.type(screen.getByLabelText('Nome'), 'Acessórios')
@@ -122,7 +143,11 @@ describe('ERP interface contracts', () => {
     )
   })
   it('preserves existing rolePermissions and submits selected ids', async () => {
-    render(<Catalog module="roles" />)
+    render(
+      <MemoryRouter>
+        <Catalog module="roles" />
+      </MemoryRouter>,
+    )
     await userEvent.click(
       await screen.findByRole('button', { name: 'Permissões' }),
     )
@@ -139,21 +164,6 @@ describe('ERP interface contracts', () => {
         permissionIds: ['perm1', 'perm2'],
       }),
     )
-  })
-  it('registers a sale with items and server-side pricing', async () => {
-    render(<Operations module="sales" />)
-    await userEvent.click(screen.getByRole('button', { name: 'Nova venda' }))
-    await screen.findByRole('option', { name: /Teclado/ })
-    await userEvent.selectOptions(screen.getByLabelText('Produto'), 'p1')
-    await userEvent.clear(screen.getByLabelText('Quantidade'))
-    await userEvent.type(screen.getByLabelText('Quantidade'), '2')
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Confirmar venda' }),
-    )
-    await screen.findByText('Operação registrada com sucesso.')
-    expect(calls.find((call) => call.method === 'post')?.data).toEqual({
-      items: [{ productId: 'p1', quantity: 2 }],
-    })
   })
   it('does not request purchase details when opening a sale', async () => {
     responses['/sales'] = {
@@ -174,7 +184,11 @@ describe('ERP interface contracts', () => {
         },
       ],
     }
-    render(<Operations module="sales" />)
+    render(
+      <MemoryRouter>
+        <Operations module="sales" />
+      </MemoryRouter>,
+    )
     await userEvent.click(
       await screen.findByRole('button', { name: 'Ver detalhes' }),
     )
@@ -194,7 +208,11 @@ describe('ERP interface contracts', () => {
     }
     responses['/purchases'] = { data: [purchase] }
     responses['/purchases/order1'] = { data: purchase }
-    render(<Operations module="purchases" />)
+    render(
+      <MemoryRouter>
+        <Operations module="purchases" />
+      </MemoryRouter>,
+    )
     await userEvent.click(
       await screen.findByRole('button', { name: 'Ver detalhes' }),
     )
@@ -287,6 +305,7 @@ describe('ERP interface contracts', () => {
         </AuthProvider>
       </MemoryRouter>,
     )
+    await screen.findByText('Pedro')
     await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     expect(
       screen
@@ -316,15 +335,24 @@ describe('ERP interface contracts', () => {
         name: `Categoria ${index}`,
       })),
     }
-    render(<Catalog module="categories" />)
+    render(
+      <MemoryRouter>
+        <Catalog module="categories" />
+      </MemoryRouter>,
+    )
     await screen.findByText('Categoria 0')
+    await userEvent.selectOptions(screen.getByLabelText('Por página'), '10')
     await userEvent.click(screen.getByRole('button', { name: 'Próxima' }))
-    expect(screen.getByText('Categoria 12')).toBeTruthy()
+    expect(await screen.findByText('Categoria 12')).toBeTruthy()
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'Buscar registros' }),
+      screen.getByRole('searchbox', { name: 'Buscar registros' }),
       'Categoria 0',
     )
-    expect(screen.getByText('Categoria 0')).toBeTruthy()
-    expect(screen.getByText('Página 1 de 1')).toBeTruthy()
+    expect(await screen.findByText('Categoria 0')).toBeTruthy()
+    expect(screen.getByText(/Página 1 de 1/)).toBeTruthy()
   })
 })
+
+vi.mock('../src/hooks/usePermissions', () => ({
+  usePermissions: () => () => true,
+}))

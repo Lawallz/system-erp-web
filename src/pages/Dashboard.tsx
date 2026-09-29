@@ -1,3 +1,4 @@
+import { usePermissions } from '../hooks/usePermissions'
 import {
   ArrowUpRight,
   Banknote,
@@ -43,6 +44,7 @@ type DashboardData = {
   }[]
 }
 export function Dashboard() {
+  const can = usePermissions()
   const resource = useResource<DashboardData>('/dashboard')
   const data = resource.data
   return (
@@ -66,10 +68,12 @@ export function Dashboard() {
               <h2>Mais clareza. Melhores decisões.</h2>
               <p>Os números da sua operação reunidos em um só lugar.</p>
             </div>
-            <Link to="/sales" className="btn light">
-              <Plus size={17} />
-              Registrar venda
-            </Link>
+            {can('sales:create') && (
+              <Link to="/sales/new" className="btn light">
+                <Plus size={17} />
+                Registrar venda
+              </Link>
+            )}
           </div>
           <section className="metrics">
             {[
@@ -121,9 +125,11 @@ export function Dashboard() {
                   <h2>Produtos em destaque</h2>
                   <p>Mais vendidos por quantidade · todo o período</p>
                 </div>
-                <Link to="/reports" className="text-link">
-                  Relatórios <ArrowUpRight size={16} />
-                </Link>
+                {can('reports:read') && (
+                  <Link to="/reports" className="text-link">
+                    Relatórios <ArrowUpRight size={16} />
+                  </Link>
+                )}
               </div>
               {data.topProducts.length ? (
                 <div className="ranking">
@@ -154,9 +160,11 @@ export function Dashboard() {
                   <ShoppingBag size={28} />
                   <h3>Seu próximo resultado começa aqui</h3>
                   <p>Registre a primeira venda para acompanhar os destaques.</p>
-                  <Link className="text-link" to="/sales">
-                    Ir para vendas <ArrowUpRight size={15} />
-                  </Link>
+                  {can('sales:read') && (
+                    <Link className="text-link" to="/sales">
+                      Ir para vendas <ArrowUpRight size={15} />
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
@@ -168,30 +176,34 @@ export function Dashboard() {
                 </div>
                 <AlertTriangle size={20} />
               </div>
-              <Link className="attention-card" to="/inventory">
-                <span className="metric-icon orange">
-                  <Package size={22} />
-                </span>
-                <div>
-                  <strong>
-                    {data.summary.lowStockCount} produtos com estoque baixo
-                  </strong>
-                  <small>Confira o saldo e planeje a reposição</small>
-                </div>
-                <ArrowUpRight size={18} />
-              </Link>
-              <Link className="attention-card" to="/purchases">
-                <span className="metric-icon violet">
-                  <ShoppingBag size={22} />
-                </span>
-                <div>
-                  <strong>
-                    {data.summary.pendingPurchases} compras pendentes
-                  </strong>
-                  <small>Acompanhe os pedidos e recebimentos</small>
-                </div>
-                <ArrowUpRight size={18} />
-              </Link>
+              {can('reports:read') && (
+                <Link className="attention-card" to="/inventory">
+                  <span className="metric-icon orange">
+                    <Package size={22} />
+                  </span>
+                  <div>
+                    <strong>
+                      {data.summary.lowStockCount} produtos com estoque baixo
+                    </strong>
+                    <small>Confira o saldo e planeje a reposição</small>
+                  </div>
+                  <ArrowUpRight size={18} />
+                </Link>
+              )}
+              {can('purchases:read') && (
+                <Link className="attention-card" to="/purchases">
+                  <span className="metric-icon violet">
+                    <ShoppingBag size={22} />
+                  </span>
+                  <div>
+                    <strong>
+                      {data.summary.pendingPurchases} compras pendentes
+                    </strong>
+                    <small>Acompanhe os pedidos e recebimentos</small>
+                  </div>
+                  <ArrowUpRight size={18} />
+                </Link>
+              )}
               <div className="low-stock-list">
                 {data.lowStockProducts.slice(0, 4).map((product) => (
                   <div key={product.id}>
@@ -213,9 +225,11 @@ export function Dashboard() {
                 <h2>Últimas vendas</h2>
                 <p>As movimentações mais recentes</p>
               </div>
-              <Link className="text-link" to="/sales">
-                Ver todas <ArrowUpRight size={16} />
-              </Link>
+              {can('sales:read') && (
+                <Link className="text-link" to="/sales">
+                  Ver todas <ArrowUpRight size={16} />
+                </Link>
+              )}
             </div>
             {data.recentSales?.length ? (
               <div className="table-scroll">
