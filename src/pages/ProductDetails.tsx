@@ -153,7 +153,16 @@ function ProductHistory({ id, kind }: { id: string; kind: string }) {
       {
         label: kind === 'sales' ? 'Venda' : 'Compra',
         render: (row) =>
-          `#${(row.sale?.id || row.purchase?.id || '').slice(0, 8)}`,
+          kind === 'purchases' && row.purchase ? (
+            <Link
+              className="text-link"
+              to={`/purchases/${row.purchase.id}/costing`}
+            >
+              #{row.purchase.id.slice(0, 8)} · custos
+            </Link>
+          ) : (
+            `#${(row.sale?.id || '').slice(0, 8)}`
+          ),
       },
       {
         label: kind === 'sales' ? 'Responsável' : 'Fornecedor',

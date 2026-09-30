@@ -15,17 +15,17 @@ Para outro servidor, copie `.env.example` para `.env.local` e defina `VITE_API_U
 
 ## Atualizar uma instalação existente
 
-Atualize primeiro o backend para a branch `feat/sales-workspace`. Depois, nesta pasta:
+Atualize primeiro o backend para a branch `feat/import-costs`. Depois, nesta pasta:
 
 ```bash
 git fetch origin
-git switch feat/sales-workspace
-git pull --ff-only origin feat/sales-workspace
+git switch feat/import-costs
+git pull --ff-only origin feat/import-costs
 npm ci
 npm run dev
 ```
 
-Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas funcionalidades. Aplique primeiro a migration de código de barras no backend com `npx prisma migrate deploy`. Não rode reset ou seed. Mantenha seu `.env` atual e o PostgreSQL existente. Use Node.js 24 para a suíte atual.
+Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas funcionalidades. Aplique primeiro as migrations pendentes no backend, incluindo a nova tabela de custos com `npx prisma migrate deploy`. Não rode reset ou seed. Mantenha seu `.env` atual e o PostgreSQL existente. Use Node.js 24 para a suíte atual.
 
 ## Funcionalidades
 
@@ -44,6 +44,23 @@ Esta branch inclui a interface anterior (`feat/erp-interface`) mais as novas fun
 - Código de barras opcional e único no cadastro de produtos; detalhes do produto com abas de movimentações, compras e vendas, filtros e paginação independentes.
 - Menus, atalhos, rotas e ações conforme permissões retornadas por `/auth/me`. Permissões são revalidadas ao focar a janela, após alterações de cadastros e respostas 403.
 
+## Custos, taxas e importação
+
+Em **Compras → Ver detalhes → Custos, taxas e importação**, simule ou registre custos de compras nacionais, importações para revenda e encomendas internacionais. O histórico de compras na página de um produto também tem um link para os custos da compra.
+
+1. Adicione os itens à compra pelo fluxo existente.
+2. Selecione Estimado ou Realizado e o tipo de operação. O Realizado pode partir da última estimativa compatível e exige referência dos documentos.
+3. Informe a moeda, o câmbio manual e os preços de origem. O formulário inicia em BRL com os custos da compra; trocar a moeda não converte os campos. Informe os valores da invoice na moeda selecionada.
+4. Adicione frete, seguro, impostos e outras despesas, sem duplicar valores já incluídos no preço. Valores fixos e bases são sempre em reais. Percentuais e bases são manuais, sem taxas predefinidas. A forma por dentro exige base sem o próprio tributo.
+5. Calcule para ver os totais, os encargos e o rateio por produto. Qualquer edição invalida a prévia. Salvar requer confirmação e cria nova revisão.
+6. Compare as versões salvas e consulte o histórico. O CSV exporta o rateio exibido. Alterações nos itens da compra são sinalizadas e exigem revisão dos dados.
+
+`purchases:read` permite consulta e simulação; salvar exige também `purchases:create`. Links ao cadastro do produto aparecem somente com `products:read`. Valores monetários são calculados no servidor usando Decimal e rateio de centavos pelos maiores restos.
+
+O módulo mede desembolso informado. Não faz apuração fiscal, enquadramento por NCM, consulta de câmbio/alíquotas, aplicação de Remessa Conforme, compensação de créditos, emissão de notas ou confirmação bancária. A margem exibida é bruta e estimada, antes de tributos da venda e despesas operacionais. Não altera estoque, preço de venda, custo cadastrado ou o valor original da compra. O realizado é informado pelo operador conforme seus documentos.
+
+Edições não salvas são perdidas ao sair da tela. Descarte ou salve antes de trocar de etapa. Se receber erro 409, recarregue para consultar a nova revisão ou os itens alterados antes de tentar novamente. A tela lista as últimas 20 revisões; as anteriores permanecem armazenadas.
+
 ## Validação
 
 ```bash
@@ -56,7 +73,7 @@ Os testes de componentes usam respostas simuladas compatíveis com os contratos 
 
 ## Limites conhecidos
 
-- Esta versão exige a branch `feat/sales-workspace` do backend para edição/status de produtos e relatório de reposição.
+- Esta versão exige a branch `feat/import-costs` do backend para edição/status de produtos e relatório de reposição.
 - Exclusão definitiva e redefinição de senha não foram incluídas.
 - O plano de reposição não prevê demanda futura nem cria compras automaticamente. O custo estimado exclui frete e impostos.
 - O backend exige pelo menos uma permissão por função ao atualizar permissões.

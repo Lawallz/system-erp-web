@@ -1,3 +1,4 @@
+import { PurchaseCosting } from './pages/PurchaseCosting'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './contexts/AuthContext'
@@ -57,6 +58,10 @@ function App() {
                 <Route path="sales/new" element={<SalesWorkspace />} />
               </Route>
               <Route element={<PermissionRoute permission="purchases:read" />}>
+                <Route
+                  path="purchases/:id/costing"
+                  element={<PurchaseCosting />}
+                />
                 <Route
                   path="purchases"
                   element={<Operations key="purchases" module="purchases" />}

@@ -360,6 +360,11 @@ function Details({
       )}
       {data && (
         <div className="detail-body">
+          {module === 'purchases' && (
+            <Link className="btn" to={`/purchases/${record.id}/costing`}>
+              Custos, taxas e importação
+            </Link>
+          )}
           <p className="muted">
             {date(data.createdAt)} · {data.supplier?.name || data.user?.name}
           </p>
