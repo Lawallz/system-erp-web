@@ -1060,3 +1060,21 @@ dialog .notice {
 .product-summary small { display: block; color: #66776f; line-height: 1.8; overflow-wrap: anywhere; }
 @media (max-width: 1100px) { .pos-layout { grid-template-columns: minmax(0, 1fr); } .cart { position: static; } .cart-items { max-height: none; } }
 @media (max-width: 600px) { .pos-catalog { padding: 14px; } .pos-search { flex-wrap: wrap; } .pos-search .btn { width: 100%; justify-content: center; } .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .product-choice { padding: 12px; } .catalog-filters > label { flex: 1; min-width: 130px; } .catalog-filters > .btn { width: 100%; } }
+
+.costing-section { padding: 24px; margin-top: 20px; min-width: 0; }
+.costing-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.costing-fieldset h3 { margin-top: 24px; }
+.costing-fieldset input, .costing-fieldset select, .costing-notes textarea { width: 100%; min-height: 40px; border: 1px solid #dce4e1; border-radius: 8px; padding: 9px 12px; font: inherit; background: #fff; color: inherit; }
+.costing-fieldset td input { min-width: 150px; }
+.costing-head { padding: 0; margin: 24px 0 16px; border: 0; flex-wrap: wrap; gap: 12px; }
+.charge-card { border: 1px solid #dce4e1; border-radius: 12px; padding: 18px; margin-bottom: 14px; background: #f8faf9; }
+.costing-notes { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.costing-notes textarea { display: block; min-height: 90px; margin-top: 8px; }
+.costing-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 18px 0; }
+.costing-totals span { font-size: 13px; color: #63736d; }
+.costing-totals strong { display: block; font-size: 22px; color: #183e32; margin-top: 8px; overflow-wrap: anywhere; }
+.costing-section details { padding: 12px 0; }
+.costing-section summary { cursor: pointer; }
+.costing-section li { margin: 8px 0; }
+.costing-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) { .costing-section { padding: 16px; } .costing-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .costing-metrics { grid-template-columns: 1fr; } }
