@@ -1,10 +1,6 @@
-import {
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { useState, type FormEvent, type ReactNode } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   ArrowRight,
   Boxes,
@@ -12,51 +8,47 @@ import {
   LockKeyhole,
   Mail,
   PackageCheck,
-} from 'lucide-react'
+} from "lucide-react";
 
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from "../contexts/auth-context";
 
 export function Login() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const {
-    login,
-    isAuthenticated,
-  } = useAuth()
+  const { login, isAuthenticated } = useAuth();
 
-  const [email, setEmail] = useState('admin@minierp.com')
-  const [password, setPassword] = useState('123456')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
-    setError('')
-    setLoading(true)
+    setError("");
+    setLoading(true);
 
     try {
       await login({
         email,
         password,
-      })
+      });
 
-      navigate('/')
+      navigate("/");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(
-          err.response?.data?.message ??
-            'Não foi possível realizar o login.',
-        )
+          err.response?.data?.message ?? "Não foi possível realizar o login.",
+        );
       } else {
-        setError('Não foi possível realizar o login.')
+        setError("Não foi possível realizar o login.");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -73,13 +65,9 @@ export function Login() {
             </div>
 
             <div>
-              <p className="text-xl font-bold text-white">
-                MiniERP
-              </p>
+              <p className="text-xl font-bold text-white">MiniERP</p>
 
-              <p className="text-xs text-slate-400">
-                Gestão inteligente
-              </p>
+              <p className="text-xs text-slate-400">Gestão inteligente</p>
             </div>
           </div>
         </div>
@@ -94,8 +82,8 @@ export function Login() {
           </h1>
 
           <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
-            Estoque, vendas, compras, fornecedores e indicadores
-            integrados em uma única plataforma.
+            Estoque, vendas, compras, fornecedores e indicadores integrados em
+            uma única plataforma.
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-4">
@@ -132,16 +120,12 @@ export function Login() {
                 <Boxes size={24} />
               </div>
 
-              <p className="text-xl font-bold text-slate-900">
-                MiniERP
-              </p>
+              <p className="text-xl font-bold text-slate-900">MiniERP</p>
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-indigo-600">
-              Bem-vindo
-            </p>
+            <p className="text-sm font-semibold text-indigo-600">Bem-vindo</p>
 
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               Entre na sua conta
@@ -152,10 +136,7 @@ export function Login() {
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
               <label
                 htmlFor="email"
@@ -211,7 +192,10 @@ export function Login() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
                 {error}
               </div>
             )}
@@ -221,7 +205,7 @@ export function Login() {
               disabled={loading}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? "Entrando..." : "Entrar"}
 
               {!loading && <ArrowRight size={18} />}
             </button>
@@ -233,33 +217,23 @@ export function Login() {
         </div>
       </section>
     </main>
-  )
+  );
 }
 
 type FeatureProps = {
-  icon: ReactNode
-  title: string
-  text: string
-}
+  icon: ReactNode;
+  title: string;
+  text: string;
+};
 
-function Feature({
-  icon,
-  title,
-  text,
-}: FeatureProps) {
+function Feature({ icon, title, text }: FeatureProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="mb-4 text-indigo-300">
-        {icon}
-      </div>
+      <div className="mb-4 text-indigo-300">{icon}</div>
 
-      <p className="font-medium text-white">
-        {title}
-      </p>
+      <p className="font-medium text-white">{title}</p>
 
-      <p className="mt-1 text-xs text-slate-500">
-        {text}
-      </p>
+      <p className="mt-1 text-xs text-slate-500">{text}</p>
     </div>
-  )
+  );
 }

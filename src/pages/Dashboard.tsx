@@ -1,307 +1,258 @@
-import type { ReactNode } from 'react'
-
+import { useState } from "react";
 import {
-  AlertTriangle,
+  ArrowUpRight,
   Banknote,
   Package,
   ReceiptText,
   ShoppingBag,
-} from 'lucide-react'
-
-import {
-  useEffect,
-  useState,
-} from 'react'
-
-import { api } from '../api/http'
-
-type TopProduct = {
-  productId: string
-  sku: string
-  name: string
-  quantity: number
-  revenue: number
-}
-
-type LowStockProduct = {
-  id: string
-  sku: string
-  name: string
-  stockQuantity: number
-  minStockAlert: number
-}
-
-type DashboardData = {
+  RefreshCw,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/auth-context";
+import { useResource } from "../hooks/useResource";
+import { currency } from "../lib/format";
+import { EmptyState, ErrorState, Loading, PageHeading } from "../components/ui";
+type Data = {
   summary: {
-    totalProducts: number
-    lowStockCount: number
-    totalSales: number
-    totalRevenue: number
-    averageTicket: number
-    pendingPurchases: number
-  }
-
-  topProducts: TopProduct[]
-
-  lowStockProducts: LowStockProduct[]
-}
-
-type DashboardResponse = {
-  status: string
-  data: DashboardData
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
-}
-
+    totalProducts: number;
+    lowStockCount: number;
+    totalSales: number;
+    totalRevenue: number;
+    averageTicket: number;
+    pendingPurchases: number;
+  };
+  topProducts: {
+    productId: string;
+    sku: string;
+    name: string;
+    quantity: number;
+    revenue: number;
+  }[];
+  lowStockProducts: {
+    id: string;
+    sku: string;
+    name: string;
+    stockQuantity: number;
+    minStockAlert: number;
+  }[];
+};
 export function Dashboard() {
-  const [dashboard, setDashboard] =
-    useState<DashboardData | null>(null)
-
-  const [loading, setLoading] = useState(true)
-
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const response =
-          await api.get<DashboardResponse>('/dashboard')
-
-        setDashboard(response.data.data)
-      } catch {
-        setError(
-          'Não foi possível carregar os dados do dashboard.',
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDashboard()
-  }, [])
-
-  if (loading) {
+  const { can, user } = useAuth();
+  if (!can("reports:read"))
     return (
-      <div className="flex min-h-96 items-center justify-center">
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+      <div className="page-enter">
+        <PageHeading
+          eyebrow="Seu espaço de trabalho"
+          title={`Bem-vindo, ${user?.name.split(" ")[0] || ""}.`}
+          description="Use as áreas disponíveis para seu perfil."
+        />
+        <div className="button-row">
+          {can("products:read") && (
+            <Link className="btn primary" to="/products">
+              Ver produtos
+            </Link>
+          )}
+          {can("sales:create") && can("products:read") && (
+            <Link className="btn secondary" to="/sales">
+              Iniciar venda
+            </Link>
+          )}
+        </div>
+        <p className="muted access-note">
+          Os indicadores gerenciais dependem da permissão de relatórios.
+        </p>
       </div>
-    )
-  }
-
-  if (error || !dashboard) {
-    return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
-        {error || 'Dashboard indisponível.'}
-      </div>
-    )
-  }
-
-  const { summary } = dashboard
-
+    );
+  return <Overview />;
+}
+function Overview() {
+  const [revision, setRevision] = useState(0);
+  const { data, loading, error } = useResource<{ data: Data }>(
+    "/dashboard",
+    revision,
+  );
+  const { user, can } = useAuth();
+  const summary = data?.data.summary;
   return (
-    <div>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-indigo-600">
-          Visão geral
-        </p>
-
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-          Dashboard
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Acompanhe os principais indicadores da operação.
-        </p>
-      </div>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card
-          label="Receita"
-          value={currency(summary.totalRevenue)}
-          icon={<Banknote size={21} />}
-        />
-
-        <Card
-          label="Vendas"
-          value={summary.totalSales.toString()}
-          icon={<ShoppingBag size={21} />}
-        />
-
-        <Card
-          label="Ticket médio"
-          value={currency(summary.averageTicket)}
-          icon={<ReceiptText size={21} />}
-        />
-
-        <Card
-          label="Produtos"
-          value={summary.totalProducts.toString()}
-          icon={<Package size={21} />}
-        />
-
-        <Card
-          label="Estoque baixo"
-          value={summary.lowStockCount.toString()}
-          icon={<AlertTriangle size={21} />}
-        />
-      </section>
-
-      <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <h2 className="font-semibold text-slate-900">
-              Produtos mais vendidos
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Ranking por faturamento
-            </p>
-          </div>
-
-          <div>
-            {dashboard.topProducts.length === 0 ? (
-              <EmptyState text="Nenhuma venda registrada." />
-            ) : (
-              dashboard.topProducts.map(
-                (product, index) => (
-                  <div
-                    key={product.productId}
-                    className="flex items-center justify-between border-b border-slate-100 px-6 py-4 last:border-0"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-500">
-                        {index + 1}
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">
-                          {product.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          {product.sku} • {product.quantity}{' '}
-                          unidades
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-sm font-bold text-slate-900">
-                      {currency(product.revenue)}
-                    </p>
-                  </div>
-                ),
-              )
+    <div className="page-enter">
+      <PageHeading
+        eyebrow="Visão geral / Sua operação"
+        title={`Olá, ${user?.name.split(" ")[0] || "bem-vindo"}.`}
+        description="Os números do seu negócio, com espaço para o que importa."
+        action={
+          <button
+            className="btn secondary"
+            disabled={loading}
+            onClick={() => setRevision((v) => v + 1)}
+          >
+            <RefreshCw size={16} />
+            Atualizar
+          </button>
+        }
+      />
+      <div className="overview-hero">
+        <div>
+          <span className="hero-tag">
+            <span className="status-dot" />
+            CLAREZA PARA DECIDIR
+          </span>
+          <h2>
+            Menos planilhas.
+            <br />
+            <span>Mais visão de negócio.</span>
+          </h2>
+          <p>Seu catálogo, suas vendas e os próximos passos da operação.</p>
+          <div className="button-row">
+            {can("sales:create") && can("products:read") && (
+              <Link to="/sales" className="btn primary">
+                Começar uma venda
+                <ArrowUpRight size={17} />
+              </Link>
+            )}
+            {can("products:read") && (
+              <Link to="/products" className="hero-link">
+                Explorar catálogo →
+              </Link>
             )}
           </div>
         </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <div className="flex items-center gap-2">
-              <AlertTriangle
-                size={18}
-                className="text-amber-500"
-              />
-
-              <h2 className="font-semibold text-slate-900">
-                Estoque baixo
-              </h2>
-            </div>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Produtos que precisam de atenção
-            </p>
+        <div className="hero-art" aria-hidden="true">
+          <div className="art-orbit" />
+          <div className="art-card art-card-one">
+            <span>OPERAÇÃO</span>
+            <i />
+            <i />
+            <i />
           </div>
-
-          <div>
-            {dashboard.lowStockProducts.length === 0 ? (
-              <EmptyState text="Nenhum produto com estoque baixo." />
-            ) : (
-              dashboard.lowStockProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center justify-between border-b border-slate-100 px-6 py-4 last:border-0"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {product.name}
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      {product.sku}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-red-600">
-                      {product.stockQuantity}
-                    </p>
-
-                    <p className="text-xs text-slate-400">
-                      mínimo {product.minStockAlert}
-                    </p>
-                  </div>
+          <div className="art-card art-card-two">
+            <Package size={32} />
+            <span>TUDO EM SEU LUGAR</span>
+          </div>
+        </div>
+      </div>
+      {loading ? (
+        <Loading />
+      ) : error ? (
+        <ErrorState message={error} retry={() => setRevision((v) => v + 1)} />
+      ) : summary && data ? (
+        <>
+          <div className="section-label">
+            <h2>Seu negócio em números</h2>
+            <span>Resumo da API</span>
+          </div>
+          <section className="metrics-grid" aria-label="Indicadores">
+            {[
+              {
+                title: "Receita",
+                value: currency(summary.totalRevenue),
+                caption: "Vendas registradas",
+                icon: Banknote,
+              },
+              {
+                title: "Vendas",
+                value: summary.totalSales,
+                caption: "Operações concluídas",
+                icon: ShoppingBag,
+              },
+              {
+                title: "Ticket médio",
+                value: currency(summary.averageTicket),
+                caption: "Valor médio por venda",
+                icon: ReceiptText,
+              },
+              {
+                title: "Produtos ativos",
+                value: summary.totalProducts,
+                caption: `${summary.lowStockCount} com estoque baixo`,
+                icon: Package,
+              },
+            ].map((m) => (
+              <article className="metric-card" key={m.title}>
+                <div>
+                  <span>{m.title}</span>
+                  <m.icon size={19} />
                 </div>
-              ))
-            )}
+                <strong>{m.value}</strong>
+                <small>{m.caption}</small>
+              </article>
+            ))}
+          </section>
+          <div className="dashboard-grid">
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">DESTAQUES DO CATÁLOGO</p>
+                  <h2>Produtos mais vendidos</h2>
+                </div>
+                <ArrowUpRight size={20} />
+              </div>
+              {!data.data.topProducts.length ? (
+                <EmptyState title="As próximas vendas aparecem aqui">
+                  Registre uma venda para acompanhar os destaques.
+                </EmptyState>
+              ) : (
+                <ol className="ranking">
+                  {data.data.topProducts.map((p, i) => (
+                    <li key={p.productId}>
+                      <span className="rank-number">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="rank-details">
+                        <strong>{p.name}</strong>
+                        <small>
+                          {p.quantity} unidades · {p.sku}
+                        </small>
+                        <div className="rank-bar">
+                          <span
+                            style={{
+                              width: `${Math.max(2, (Number(p.revenue) / Math.max(1, ...data.data.topProducts.map((p) => Number(p.revenue)))) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <strong className="numeric">{currency(p.revenue)}</strong>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">PONTOS DE ATENÇÃO</p>
+                  <h2>Hora de repor</h2>
+                </div>
+                <span className="count-badge">{summary.lowStockCount}</span>
+              </div>
+              {!data.data.lowStockProducts.length ? (
+                <EmptyState title="Estoque em dia">
+                  Nenhum produto abaixo do mínimo informado.
+                </EmptyState>
+              ) : (
+                <ul className="stock-list">
+                  {data.data.lowStockProducts.map((p) => (
+                    <li key={p.id}>
+                      <div>
+                        <strong>{p.name}</strong>
+                        <small>
+                          {p.sku} · mínimo {p.minStockAlert}
+                        </small>
+                      </div>
+                      <span className="stock-badge low">
+                        {p.stockQuantity} un.
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="panel-footnote">
+                <span>Compras pendentes</span>
+                <strong>{summary.pendingPurchases}</strong>
+              </div>
+            </section>
           </div>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">
-          Compras pendentes
-        </p>
-
-        <p className="mt-1 text-3xl font-bold text-slate-900">
-          {summary.pendingPurchases}
-        </p>
-      </section>
+        </>
+      ) : null}
     </div>
-  )
-}
-
-type CardProps = {
-  label: string
-  value: string
-  icon: ReactNode
-}
-
-function Card({
-  label,
-  value,
-  icon,
-}: CardProps) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-        {icon}
-      </div>
-
-      <p className="text-sm text-slate-500">
-        {label}
-      </p>
-
-      <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function EmptyState({
-  text,
-}: {
-  text: string
-}) {
-  return (
-    <div className="px-6 py-12 text-center text-sm text-slate-400">
-      {text}
-    </div>
-  )
+  );
 }
