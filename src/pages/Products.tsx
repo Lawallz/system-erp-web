@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowUpRight, Package, Pencil, Plus, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { Category, Product, ProductPage } from "../api/types";
 import { useDebounced, useResource } from "../hooks/useResource";
 import { useAuth } from "../contexts/auth-context";
@@ -16,20 +16,48 @@ import { ProductForm } from "../components/ProductForm";
 
 export function Products() {
   const { can } = useAuth();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [page, setPage] = useState(1);
+  const [locationParams, setLocationParams] = useSearchParams();
+  const search = (locationParams.get("search") ?? "").slice(0, 120);
+  const categoryParam = locationParams.get("categoryId") ?? "";
+  const category = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(categoryParam)
+    ? categoryParam
+    : "";
+  const pageParam = Number(locationParams.get("page"));
+  const pageSize = 12;
+  const maxPage = Math.floor(2_147_483_647 / pageSize) + 1;
+  const page =
+    Number.isSafeInteger(pageParam) && pageParam > 0 && pageParam <= maxPage
+      ? pageParam
+      : 1;
+
+  function updateFilters(
+    changes: Record<string, string>,
+    replace = false,
+  ) {
+    setLocationParams((current) => {
+      const next = new URLSearchParams(current);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      return next;
+    }, { replace });
+  }
   const [revision, setRevision] = useState(0);
   const [editor, setEditor] = useState<Product | "new" | null>(null);
   const [success, setSuccess] = useState("");
   const query = useDebounced(search);
   const params = new URLSearchParams({
     page: String(page),
-    pageSize: "12",
-    search: query,
+    pageSize: String(pageSize),
+    search: query.trim(),
   });
   if (category) params.set("categoryId", category);
-  const result = useResource<ProductPage>(`/products?${params}`, revision);
+  const result = useResource<ProductPage>(
+    `/products?${params}`,
+    revision,
+    search === query,
+  );
   const categories = useResource<Category[]>("/products/categories", revision);
   const searching = search !== query;
   return (
@@ -81,19 +109,18 @@ export function Products() {
               aria-label="Buscar produtos"
               placeholder="Buscar por nome ou SKU…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              maxLength={120}
+              onChange={(event) =>
+                updateFilters({ search: event.target.value, page: "" }, true)
+              }
             />
           </div>
           <select
             aria-label="Filtrar por categoria"
             value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setPage(1);
-            }}
+            onChange={(event) =>
+              updateFilters({ categoryId: event.target.value, page: "" })
+            }
           >
             <option value="">Todas as categorias</option>
             {categories.data?.map((c) => (
@@ -105,11 +132,7 @@ export function Products() {
           {(search || category) && (
             <button
               className="btn ghost"
-              onClick={() => {
-                setSearch("");
-                setCategory("");
-                setPage(1);
-              }}
+              onClick={() => updateFilters({ search: "", categoryId: "", page: "" })}
             >
               Limpar filtros
             </button>
@@ -128,6 +151,12 @@ export function Products() {
             message={result.error}
             retry={() => setRevision((v) => v + 1)}
           />
+        ) : result.data && page > Math.max(1, result.data.totalPages) ? (
+          <EmptyState title="Página indisponível">
+            <button className="btn secondary" onClick={() => updateFilters({ page: "" }, true)}>
+              Voltar à primeira página
+            </button>
+          </EmptyState>
         ) : !result.data?.data.length ? (
           <EmptyState
             title={
@@ -215,12 +244,12 @@ export function Products() {
             </table>
           </div>
         )}
-        {!result.loading && !result.error && result.data && (
+        {!result.loading && !result.error && result.data && page <= result.data.totalPages && (
           <Pagination
             page={page}
             totalPages={result.data.totalPages}
             total={result.data.total}
-            onChange={setPage}
+            onChange={(next) => updateFilters({ page: next === 1 ? "" : String(next) })}
           />
         )}
       </section>

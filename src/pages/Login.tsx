@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowRight,
@@ -13,7 +13,14 @@ import {
 import { useAuth } from "../contexts/auth-context";
 
 export function Login() {
-  const navigate = useNavigate();
+  const { state } = useLocation();
+  const returnTo: unknown = state?.returnTo;
+  const destination =
+    typeof returnTo === "string" &&
+    /^\/(?![/\\])/.test(returnTo) &&
+    !/[\r\n\t]/.test(returnTo)
+      ? returnTo
+      : "/";
 
   const { login, isAuthenticated } = useAuth();
 
@@ -23,7 +30,7 @@ export function Login() {
   const [error, setError] = useState("");
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={destination} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,8 +44,6 @@ export function Login() {
         email,
         password,
       });
-
-      navigate("/");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(
